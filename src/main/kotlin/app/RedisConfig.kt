@@ -9,8 +9,11 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory
 import org.springframework.data.redis.core.RedisTemplate
+import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.serializer.RedisSerializer
+import org.springframework.data.redis.serializer.StringRedisSerializer
 import java.time.Duration
+
 
 /**
  * Created by itaesu on 2024/02/09.
@@ -40,10 +43,21 @@ class RedisConfig {
     @Bean
     fun redisTemplate(redisInfo: RedisInfo): RedisTemplate<String, Any> {
         return RedisTemplate<String, Any>().apply {
-            this.setDefaultSerializer(RedisSerializer.json())
             this.keySerializer = RedisSerializer.string()
+            this.valueSerializer = RedisSerializer.string()
+
+            this.hashKeySerializer = RedisSerializer.string()
+            this.hashValueSerializer = RedisSerializer.string()
+
+            this.setDefaultSerializer(RedisSerializer.string())
             this.connectionFactory = redisConnectionFactory(redisInfo)
         }
+    }
+
+    @Bean
+    fun redisStringTemplate(redisInfo: RedisInfo): StringRedisTemplate {
+        // RedisTemplate<String, String>, 모든 serializer가 StringRedisSerializer
+        return StringRedisTemplate(redisConnectionFactory(redisInfo))
     }
 }
 
