@@ -2,12 +2,14 @@ package io.taesu.redisspring.peralgorithm
 
 import org.slf4j.LoggerFactory
 import org.springframework.data.redis.core.StringRedisTemplate
-import org.springframework.stereotype.Service
+import org.springframework.data.redis.core.script.RedisScript
+import org.springframework.stereotype.Component
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import kotlin.math.log10
 import kotlin.random.Random
+
 
 /**
  * Created by itaesu on 2024/02/12.
@@ -16,8 +18,38 @@ import kotlin.random.Random
  * @version redis-spring
  * @since redis-spring
  */
-@Service
+@Component
 class StringRedisRepository(private val redisStringTemplate: StringRedisTemplate) {
+    fun simpleGet(key: String): String? {
+        return redisStringTemplate.opsForValue().get(key)
+    }
+
+    fun simpleMGet(keys: List<String>): List<String> {
+        return redisStringTemplate.opsForValue().multiGet(keys) ?: emptyList()
+    }
+
+    fun simplePipelineGet(keys: List<String>): List<String> {
+        return redisStringTemplate.executePipelined { conn ->
+            keys.forEach {
+                conn.stringCommands().get(redisStringTemplate.stringSerializer.serialize(it)!!)
+            }
+            null // return null
+        }.map { it.toString() }
+    }
+
+    fun simpleLuaGet(keys: List<String>): List<String> {
+        val script = RedisScript<List<String>>(
+            """
+            local results = {}
+            for i, key in ipairs(KEYS) do
+                results[i] = redis.call('GET', key) 
+            end
+            return results
+        """.trimIndent()
+        )
+        return redisStringTemplate.execute(script, keys)
+    }
+
     fun get(key: String, ttl: Duration, beta: Double = 1.0, recompute: () -> String): String? {
         val nowTime = Instant.now().toEpochMilli()
         val (value, delta, expiry) = get(key, nowTime) ?: return null
