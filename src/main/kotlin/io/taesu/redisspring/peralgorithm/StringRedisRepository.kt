@@ -6,7 +6,6 @@ import org.springframework.data.redis.core.script.RedisScript
 import org.springframework.stereotype.Component
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 import kotlin.math.log10
 import kotlin.random.Random
 
@@ -66,11 +65,23 @@ class StringRedisRepository(private val redisStringTemplate: StringRedisTemplate
     }
 
     private fun get(key: String, nowTime: Long): RedisGetEntry? {
-        val value = redisStringTemplate.opsForValue().get(key) ?: return null
-        val delta = redisStringTemplate.opsForValue().get("$key:delta")?.toLong() ?: return null
-        val expire = redisStringTemplate.getExpire(key, TimeUnit.MILLISECONDS)
-        val expiry = expire + nowTime
-        return RedisGetEntry(value, delta, expiry)
+        val script = RedisScript<List<String?>>(
+            """
+                return 
+                {
+                    redis.call('GET', KEYS[1]),
+                    redis.call('GET', KEYS[2]),
+                    redis.call('TTL', KEYS[1])
+                }
+            """.trimIndent()
+        )
+        return with(redisStringTemplate.execute(script, listOf(key, "$key:delta"))) {
+            val value = this[0] ?: return null
+            val delta = (this[1]?.toLong()) ?: return null
+            val expire = (this[2] as? Long?) ?: return null
+            val expiry = expire + nowTime
+            RedisGetEntry(value, delta, expiry)
+        }
     }
 
     fun save(key: String, ttl: Duration, compute: () -> String) {
@@ -81,8 +92,15 @@ class StringRedisRepository(private val redisStringTemplate: StringRedisTemplate
     }
 
     fun save(key: String, value: String, delta: Long, ttl: Duration) {
-        redisStringTemplate.opsForValue().set(key, value, ttl)
-        redisStringTemplate.opsForValue().set("$key:delta", delta.toString(), ttl)
+        val script = RedisScript<Unit>(
+        """
+            redis.call('SET', KEYS[1], ARGV[1]);
+            redis.call('SET', KEYS[2], ARGV[2]);
+            redis.call('EXPIRE', KEYS[1], ARGV[3]);
+            redis.call('EXPIRE', KEYS[2], ARGV[3]);
+        """.trimIndent()
+        )
+        redisStringTemplate.execute(script, listOf(key, "$key:delta"), value, delta.toString(), ttl.seconds.toString())
     }
 
     companion object {
