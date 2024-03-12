@@ -103,6 +103,10 @@ class StringRedisRepository(private val redisStringTemplate: StringRedisTemplate
         redisStringTemplate.execute(script, listOf(key, "$key:delta"), value, delta.toString(), ttl.seconds.toString())
     }
 
+    fun incr(key: String): Long? {
+        return redisStringTemplate.opsForValue().increment(key)
+    }
+
     companion object {
         val log = LoggerFactory.getLogger(this::class.java)
     }
