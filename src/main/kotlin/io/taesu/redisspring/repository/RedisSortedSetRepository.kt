@@ -22,7 +22,14 @@ class RedisSortedSetRepository(private val redisStringTemplate: StringRedisTempl
         return redisStringTemplate.opsForZSet().popMax(key)
     }
 
-    fun rank(key: String, value: String): Long? {
-        return redisStringTemplate.opsForZSet().rank(key, value)
+    fun rank(key: String, value: String, zeroBased: Boolean = false): Long? {
+        val rank = redisStringTemplate.opsForZSet().rank(key, value) ?: return null
+        return rank.run {
+            if (zeroBased) {
+                this
+            } else {
+                this + 1
+            }
+        }
     }
 }
