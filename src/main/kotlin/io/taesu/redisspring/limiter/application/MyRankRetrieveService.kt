@@ -15,13 +15,13 @@ class MyRankRetrieveService(
     fun rank(userLimitedJob: UserLimitedJob): MyRankRetrieveResponse {
         val rank = with(userLimitedJob) {
             redisSortedSetRepository.rank(jobId.queueName, userKey.toString())
-                ?: return translateNotWorkingStatus(userLimitedJob)
+                ?: return translateNotWaitingStatus(userLimitedJob)
         }
 
         return MyRankRetrieveResponse.waiting(rank)
     }
 
-    private fun translateNotWorkingStatus(userLimitedJob: UserLimitedJob): MyRankRetrieveResponse {
+    private fun translateNotWaitingStatus(userLimitedJob: UserLimitedJob): MyRankRetrieveResponse {
         if (workingSetRetrieveService.exists(userLimitedJob)) {
             return MyRankRetrieveResponse.working()
         }
