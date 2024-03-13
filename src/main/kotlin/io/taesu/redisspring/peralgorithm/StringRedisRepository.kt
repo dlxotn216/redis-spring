@@ -103,8 +103,8 @@ class StringRedisRepository(private val redisStringTemplate: StringRedisTemplate
         redisStringTemplate.execute(script, listOf(key, "$key:delta"), value, delta.toString(), ttl.seconds.toString())
     }
 
-    fun incr(key: String): Long? {
-        return redisStringTemplate.opsForValue().increment(key)
+    fun simpleSave(key: String, value: String) {
+        return redisStringTemplate.opsForValue().set(key, value)
     }
 
     companion object {

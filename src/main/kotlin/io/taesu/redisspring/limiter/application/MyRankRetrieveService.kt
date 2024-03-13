@@ -28,7 +28,7 @@ class MyRankRetrieveService(
         return MyRankRetrieveResponse.finished()
     }
 
-    fun pop(jobId: LimitedJob): ZSetOperations.TypedTuple<String>? {
-        return redisSortedSetRepository.popMax(jobId.queueName)
+    fun pop(jobId: LimitedJob, count: Long): Set<ZSetOperations.TypedTuple<String>> {
+        return redisSortedSetRepository.popMax(jobId.queueName, count)
     }
 }
