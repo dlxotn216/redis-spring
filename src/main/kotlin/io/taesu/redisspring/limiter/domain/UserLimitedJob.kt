@@ -1,6 +1,6 @@
 package io.taesu.redisspring.limiter.domain
 
-class UserLimitedJob(
+data class UserLimitedJob(
     val jobId: LimitedJob,
     val userKey: Long
 )
